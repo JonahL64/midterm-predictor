@@ -1,5 +1,7 @@
 -- create tables
 
+DROP TABLE IF EXISTS rating_changes, poll_result, poll, pollster, candidacy, race, district_county, district, candidate, party, state;
+
 CREATE TABLE state (
     state_code CHAR(2) PRIMARY KEY,
     name VARCHAR(40) NOT NULL,
