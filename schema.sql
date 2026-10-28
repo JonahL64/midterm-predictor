@@ -105,3 +105,70 @@ CREATE TABLE rating_changes (
     new_rating VARCHAR(10),
     PRIMARY KEY (race_id, changed_at)
 );
+
+DELIMITER $$
+CREATE TRIGGER trg_poll_weight
+BEFORE INSERT on poll
+FOR EACH ROW
+    BEGIN
+        SET NEW.weight = SQRT(NEW.sample_size) / 10;
+    END$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER trg_race_clamp
+BEFORE UPDATE ON race
+FOR EACH ROW
+    BEGIN
+        IF NEW.win_prob_d > 1 THEN
+            SET NEW.win_prob_d = 1.00;
+        ELSEIF NEW.win_prob_d < 0 THEN
+            SET NEW.win_prob_d = 0.00;
+        END IF
+    END$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE TRIGGER trg_rating_log
+AFTER UPDATE ON race
+FOR EACH ROW
+    BEGIN
+        IF NOT (NEW.rating <=> OLD.rating) THEN
+            INSERT INTO rating_changes (race_id, old_rating, new_rating)
+            VALUES (OLD.race_id, OLD.rating, NEW.rating);
+        END IF;
+    END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE PROCEDURE seatsRated(
+    IN p_party CHAR(1),
+    IN p_chamber VARCHAR(6),
+    OUT n INT
+)
+
+BEGIN
+    SELECT COUNT(*) INTO n
+    FROM race
+    WHERE rating LIKE CONCAT('%', p_party)
+    AND chamber = p_chamber;
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE PROCEDURE updateRating(
+    IN p_race INT,
+    IN p_rating VARCHAR(10)
+)
+
+BEGIN
+    UPDATE race
+    SET rating = p_rating
+    WHERE p_race = race_id;
+END$$
+
+DELIMITER ;
