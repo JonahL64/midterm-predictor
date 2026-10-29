@@ -73,6 +73,8 @@ CREATE TABLE race (
     map_cycle INT,
     actual_margin DECIMAL(5, 2),
     election_date DATE,
+    is_special BOOLEAN DEFAULT FALSE,
+    CONSTRAINT is_unique_race UNIQUE (cycle_year, chamber, state_code, district_num, is_special),
     CONSTRAINT is_valid_chamber CHECK (chamber in ('House', 'Senate')),
     CONSTRAINT is_valid_cycle_year CHECK (cycle_year % 2 = 0),
     CONSTRAINT state_code_to_state_from_race FOREIGN KEY (state_code) REFERENCES state(state_code),
@@ -84,9 +86,11 @@ CREATE TABLE race (
 CREATE TABLE candidacy (
     candidate_id INT,
     race_id INT,
+    party_id INT,
     is_incumbent BOOLEAN DEFAULT FALSE,
     votes INT,
     is_winner BOOLEAN,
+    CONSTRAINT candidacy_to_party FOREIGN KEY (party_id) REFERENCES party(party_id),
     CONSTRAINT to_race FOREIGN KEY (race_id) REFERENCES race(race_id) ON DELETE CASCADE,
     CONSTRAINT to_candidate FOREIGN KEY (candidate_id) REFERENCES candidate(candidate_id),
     PRIMARY KEY (candidate_id, race_id)
@@ -109,6 +113,8 @@ CREATE TABLE poll (
     weight DECIMAL(6,3),
     population VARCHAR(3),
     partisan_sponsor CHAR(1),
+    poll_source VARCHAR(30),
+    poll_url VARCHAR(255),
     CONSTRAINT poll_to_race FOREIGN KEY (race_id) REFERENCES race(race_id) ON DELETE CASCADE,
     CONSTRAINT poll_to_pollster FOREIGN KEY (pollster_id) REFERENCES pollster(pollster_id) ON DELETE SET NULL,
     CONSTRAINT chk_poll_valid CHECK (end_date >= start_date AND sample_size > 0),
@@ -123,6 +129,18 @@ CREATE TABLE poll_result (
     CONSTRAINT to_candidate_from_poll_result FOREIGN KEY (candidate_id) REFERENCES candidate(candidate_id),
     CONSTRAINT check_poll_result_valid CHECK (share BETWEEN 0 AND 100),
     PRIMARY KEY (poll_id, candidate_id)
+);
+
+CREATE TABLE generic_ballot_poll (
+    poll_id INT,
+    pollster_id INT,
+    end_date DATE,
+    sample_size INT,
+    population INT,
+    dem_share DOUBLE(4,3),
+    rep_share DOUBLE(4,3),
+    CONSTRAINT generic_ballot_to_poll FOREIGN KEY (poll_id) REFERENCES poll(poll_id),
+    CONSTRAINT generic_ballot_to_pollster FOREIGN KEY (pollster_id) REFERENCES pollster(pollster_id)
 );
 
 CREATE TABLE rating_changes (
